@@ -21,3 +21,5 @@ dpkg -i percona-release_0.1-4.$(lsb_release -sc)_all.deb
 
 # update the local cache
 apt-get update
+
+sleep 4

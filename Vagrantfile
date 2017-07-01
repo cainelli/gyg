@@ -1,3 +1,7 @@
+require 'yaml'
+yaml = YAML::load(File.read("#{File.dirname(__FILE__)}/config.yaml"))
+configuration = yaml['configs']
+
 Vagrant.configure(2) do |config|
   config.vm.box = "ubuntu/trusty64"
   
@@ -10,39 +14,65 @@ Vagrant.configure(2) do |config|
   
    # master database
   config.vm.define "master" do |master|
-    config.vm.network "private_network", ip: "10.0.0.11"
-    config.vm.box_check_update = false
-    config.vm.hostname = "master"
-    config.vm.synced_folder ".", "/vagrant"
+    master.vm.network "private_network", ip: configuration['master']['ip']
+    master.vm.box_check_update = false
+    master.vm.hostname = "master"
+    master.vm.synced_folder ".", "/vagrant"
 
-    config.vm.provision :puppet do |puppet|
+    master.vm.provision :puppet do |puppet|
       puppet.manifests_path = "puppet/manifests"
       puppet.manifest_file = "master.pp"
       puppet.module_path = "puppet/modules"
       puppet.options = ['--verbose']
-      # puppet.facter = {
-      #     "pma_mysql_root_password"  => "root",
-      #     "pma_controluser_password" => "awesome"
-      # }
+      puppet.facter = {
+        "mysql_root_user" => configuration['master']['mysql_root_user'],
+        "mysql_root_pass" => configuration['master']['mysql_root_pass'],
+        "mysql_replication_user" => configuration['master']['mysql_replication_user'],
+        "mysql_replication_pass" => configuration['master']['mysql_replication_pass'],
+      }
     end
   end
 
   # slave database
-  # config.vm.define "slave" do |slave|
-  #   config.vm.network "private_network", ip: "10.0.0.12"
-  #   config.vm.box_check_update = false
-  #   config.vm.hostname = "slave"
-  #   config.vm.synced_folder ".", "/vagrant"
+  config.vm.define "slave" do |slave|
+    slave.vm.network "private_network", ip: configuration['slave']['ip']
+    slave.vm.box_check_update = false
+    slave.vm.hostname = "slave"
+    slave.vm.synced_folder ".", "/vagrant"
 
-  #   config.vm.provision :puppet do |puppet|
-  #     puppet.manifests_path = "puppet/manifests"
-  #     puppet.manifest_file = "slave.pp"
-  #     puppet.module_path = "puppet/modules"
-  #     puppet.options = ['--verbose']
-  #     puppet.facter = {
-  #         "pma_mysql_root_password"  => "root",
-  #         "pma_controluser_password" => "awesome"
-  #     }
-  #   end
-  # end
+    slave.vm.provision :puppet do |puppet|
+      puppet.manifests_path = "puppet/manifests"
+      puppet.manifest_file = "slave.pp"
+      puppet.module_path = "puppet/modules"
+      puppet.options = ['--verbose']
+      puppet.facter = {
+        "mysql_root_user" => configuration['slave']['mysql_root_user'],
+        "mysql_root_pass" => configuration['slave']['mysql_root_pass'],
+      }
+    end
+
+    slave.vm.provision "shell",
+      inline: "/vagrant/helpers/setup-replica.py \
+      --master-host=$1 \
+      --master-user=$2 \
+      --master-password=$3 \
+      --slave-user=$4 \
+      --slave-password=$5 \
+      --slave-host=$6 \
+      --replication-user=$7 \
+      --replication-password=$8",
+      args: [
+        configuration['master']['ip'],
+        configuration['master']['mysql_root_user'],
+        configuration['master']['mysql_root_pass'],
+        configuration['slave']['ip'],
+        configuration['slave']['mysql_root_user'],
+        configuration['slave']['mysql_root_pass'],
+        configuration['master']['mysql_replication_user'],
+        configuration['master']['mysql_replication_pass']
+      ]
+    
+    # slave.vm.provision "shell",
+    #   inline: "/vagrant/helpers/setup-replica.py"
+  end
 end
