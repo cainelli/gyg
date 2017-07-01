@@ -1,0 +1,29 @@
+#!/usr/bin/python
+from flask import Flask
+import MySQLdb as mdb
+from healthcheck import HealthCheck, EnvironmentDump
+
+app = Flask(__name__)
+health = HealthCheck(app, "/healthz")
+
+#########################
+# health check functions
+#########################
+def mysql_replication(host='localhost', user='root', password=''):
+  con = mdb.connect(host, user, password)
+  cur = con.cursor(mdb.cursors.DictCursor)
+  
+  cur.execute('SHOW SLAVE STATUS')
+  slave_status = cur.fetchone()
+
+  slave_sql_running = True if slave_status["Slave_SQL_Running"] == "Yes" else False
+
+  return slave_sql_running, slave_status["Seconds_Behind_Master"]
+
+health.add_check(mysql_replication)
+
+if __name__ == '__main__':
+  try:
+    app.run(host='0.0.0.0', port=5000, debug=True)
+  except Exception, e:
+    print 'Error starting web app: %s' % e
