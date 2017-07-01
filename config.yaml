@@ -1,0 +1,12 @@
+---
+configs:
+  master:
+    ip: 10.0.0.11
+    mysql_root_user: gyg_root
+    mysql_root_pass: gyg_pass
+    mysql_replication_user: gyg_repl
+    mysql_replication_pass: gyg_pass
+  slave:
+    ip: 10.0.0.12
+    mysql_root_user: gyg_root
+    mysql_root_pass: gyg_pass
