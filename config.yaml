@@ -1,5 +1,8 @@
 ---
 configs:
+  mysql_database_name: gyg-selfish
+  mysql_user: gyg
+  mysql_pass: gyg_pass
   master:
     ip: 10.0.0.11
     mysql_root_user: gyg_root
