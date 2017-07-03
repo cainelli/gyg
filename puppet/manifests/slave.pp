@@ -15,13 +15,29 @@ class {'mysql::server':
       log-error     => '/var/log/mysqld.log',
     },
   },
+  users => {
+    "${mysql_root_user}@%" => {
+      ensure                   => 'present',
+      password_hash            => mysql_password($mysql_root_pass),
+    },
+  },
+  grants => {
+    "${mysql_root_user}@%/*.*" => {
+      ensure     => 'present',
+      options    => ['GRANT'],
+      privileges => ['ALL'],
+      table      => '*.*',
+      user       => "${mysql_root_user}@%",
+    },
+  }
 }
 
 # import database
-mysql::db { 'gyg-selfish':
-  user            => $mysql_root_user,
-  password        => $mysql_root_pass,
-  host            => 'localhost',
-  sql             => '/vagrant/dump.sql',
+mysql::db { $mysql_database_name:
+  user            => $mysql_user,
+  password        => $mysql_pass,
+  host            => '%',
+  grant           => ['all'],
+  # sql             => '/vagrant/dump.sql',
   import_timeout  => 900,
 }

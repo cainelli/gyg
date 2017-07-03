@@ -21,7 +21,11 @@ class {'::mysql::server':
     "${mysql_replication_user}@%" => {
       ensure                   => 'present',
       password_hash            => mysql_password($mysql_replication_pass),
-    },  
+    },
+    "${mysql_root_user}@%" => {
+      ensure                   => 'present',
+      password_hash            => mysql_password($mysql_root_pass),
+    },
   },
   grants => {
     "${mysql_replication_user}@%/*.*" => {
@@ -31,16 +35,22 @@ class {'::mysql::server':
       table      => '*.*',
       user       => "${mysql_replication_user}@%",
     },
+    "${mysql_root_user}@%/*.*" => {
+      ensure     => 'present',
+      options    => ['GRANT'],
+      privileges => ['ALL'],
+      table      => '*.*',
+      user       => "${mysql_root_user}@%",
+    },
   }
 }
 
 # import database
-mysql::db { 'gyg-selfish':
-  user            => $mysql_root_user,
-  password        => mysql_root_pass,
-  host            => 'localhost',
+mysql::db { $mysql_database_name:
+  user            => $mysql_user,
+  password        => $mysql_pass,
+  host            => '%',
+  grant           => ['ALL'],
   sql             => '/vagrant/dump.sql',
   import_timeout  => 900,
 }
-
-# notice("${mysql_replication_user}")
