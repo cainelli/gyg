@@ -1,3 +1,9 @@
+.vagrant/
+puppet/modules
+puppet/.tmp
+puppet/Puppetfile.lock
+puppet/.librarian/
+dump.sql
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
