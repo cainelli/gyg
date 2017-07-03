@@ -25,10 +25,13 @@ Vagrant.configure(2) do |config|
       puppet.module_path = "puppet/modules"
       puppet.options = ['--verbose']
       puppet.facter = {
+        "mysql_user" => configuration['mysql_user'],
+        "mysql_pass" => configuration['mysql_pass'],
         "mysql_root_user" => configuration['master']['mysql_root_user'],
         "mysql_root_pass" => configuration['master']['mysql_root_pass'],
         "mysql_replication_user" => configuration['master']['mysql_replication_user'],
         "mysql_replication_pass" => configuration['master']['mysql_replication_pass'],
+        "mysql_database_name" => configuration['mysql_database_name'],
       }
     end
   end
@@ -46,21 +49,30 @@ Vagrant.configure(2) do |config|
       puppet.module_path = "puppet/modules"
       puppet.options = ['--verbose']
       puppet.facter = {
+        "mysql_user" => configuration['mysql_user'],
+        "mysql_pass" => configuration['mysql_pass'],
         "mysql_root_user" => configuration['slave']['mysql_root_user'],
         "mysql_root_pass" => configuration['slave']['mysql_root_pass'],
+        "mysql_database_name" => configuration['mysql_database_name'],
       }
     end
 
+    # configure health check application.
+    slave.vm.provision "shell",
+        inline: "/vagrant/helpers/healthz-install.sh"
+    
+    # configure replica.
     slave.vm.provision "shell",
       inline: "/vagrant/helpers/setup-replica.py \
       --master-host=$1 \
       --master-user=$2 \
       --master-password=$3 \
-      --slave-user=$4 \
-      --slave-password=$5 \
-      --slave-host=$6 \
+      --slave-host=$4 \
+      --slave-user=$5 \
+      --slave-password=$6 \
       --replication-user=$7 \
-      --replication-password=$8",
+      --replication-password=$8 \
+      --database=$9",
       args: [
         configuration['master']['ip'],
         configuration['master']['mysql_root_user'],
@@ -69,10 +81,8 @@ Vagrant.configure(2) do |config|
         configuration['slave']['mysql_root_user'],
         configuration['slave']['mysql_root_pass'],
         configuration['master']['mysql_replication_user'],
-        configuration['master']['mysql_replication_pass']
+        configuration['master']['mysql_replication_pass'],
+        configuration['mysql_database_name']
       ]
-    
-    # slave.vm.provision "shell",
-    #   inline: "/vagrant/helpers/setup-replica.py"
   end
 end
