@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from flask import Flask
 import MySQLdb as mdb
-from healthcheck import HealthCheck, EnvironmentDump
+from healthcheck import HealthCheck
 
 app = Flask(__name__)
 health = HealthCheck(app, "/healthz")
@@ -9,14 +9,31 @@ health = HealthCheck(app, "/healthz")
 #########################
 # health check functions
 #########################
-def mysql_replication(host='localhost', user='root', password=''):
+def mysql_replication(host='localhost', user='root', password='', sbm_threshold=5):
+  """ This function check mysql replication using the information from `SLAVE STATUS` query.
+  
+  Args:
+    host (str): mysql slave hostname or ip address. Defaults 'localhost'
+    user (str): mysql username with privileges to run `SLAVE STATUS`. Defaults 'root'
+    password (str): mysql user's password. Defaults ''.
+    sbm_threshold: Threshold for seconds behind master, if results is higher than this value it will returns False. Defaults 5.
+
+  Returns:
+    Bool.
+  """
   con = mdb.connect(host, user, password)
   cur = con.cursor(mdb.cursors.DictCursor)
   
   cur.execute('SHOW SLAVE STATUS')
   slave_status = cur.fetchone()
 
-  slave_sql_running = True if slave_status["Slave_SQL_Running"] == "Yes" else False
+  slave_sql_running = False
+  if (
+    slave_status["Slave_SQL_Running"] == "Yes" and
+    slave_status["Slave_IO_Running"] == "Yes" and
+    slave_status["Seconds_Behind_Master"] <  sbm_threshold
+  ):
+    slave_sql_running = True
 
   return slave_sql_running, slave_status["Seconds_Behind_Master"]
 
